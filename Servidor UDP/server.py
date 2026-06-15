@@ -3,7 +3,7 @@ import socket
 #Socket UDP
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-server_address = ('127.0.0.1', 8080)
+server_address = ('0.0.0.0', 8080)
 server_socket.bind(server_address)
 
 print("UDP Server is up and listening...")
