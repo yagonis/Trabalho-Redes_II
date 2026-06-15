@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat WebSocket — Lab 31</title>
+  <style>
+    /* ── Reset & base ──────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1117;
+      --surface:   #1a1d27;
+      --border:    #2a2d3e;
+      --accent:    #5865f2;
+      --accent-h:  #4752c4;
+      --green:     #57f287;
+      --yellow:    #fee75c;
+      --red:       #ed4245;
+      --text:      #dcddde;
+      --text-dim:  #72767d;
+      --self-bg:   #2c2f45;
+      --radius:    10px;
+      --font:      'Segoe UI', system-ui, sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── Login overlay ─────────────────────────────────────────── */
+    #login-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.7);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    #login-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem 2rem;
+      width: min(400px, 92vw);
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    #login-box h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    #login-box h1 span { color: var(--accent); }
+
+    .field { display: flex; flex-direction: column; gap: .4rem; }
+    .field label { font-size: .82rem; color: var(--text-dim); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+
+    input[type="text"], input[type="number"] {
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 1rem;
+      padding: .6rem .9rem;
+      outline: none;
+      transition: border-color .2s;
+      width: 100%;
+    }
+    input:focus { border-color: var(--accent); }
+
+    #btn-conectar {
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      padding: .75rem;
+      transition: background .2s, transform .1s;
+    }
+    #btn-conectar:hover { background: var(--accent-h); }
+    #btn-conectar:active { transform: scale(.97); }
+
+    #erro-login {
+      color: var(--red);
+      font-size: .88rem;
+      min-height: 1.2em;
+      text-align: center;
+    }
+
+    /* ── Chat shell ────────────────────────────────────────────── */
+    #chat-shell {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      width: min(900px, 100vw);
+    }
+
+    /* Header */
+    #header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: .8rem;
+      padding: .9rem 1.2rem;
+      flex-shrink: 0;
+    }
+
+    #header-icon {
+      width: 38px; height: 38px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    #header-title { font-weight: 700; font-size: 1.05rem; }
+    #header-sub   { font-size: .78rem; color: var(--text-dim); }
+
+    #status-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--red);
+      margin-left: auto;
+      transition: background .3s;
+    }
+    #status-dot.online  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    #status-label { font-size: .8rem; color: var(--text-dim); }
+
+    /* Body: sidebar + messages */
+    #body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    #sidebar {
+      width: 200px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    #sidebar-title {
+      font-size: .75rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: 1rem 1rem .5rem;
+    }
+
+    #user-list {
+      list-style: none;
+      overflow-y: auto;
+      flex: 1;
+      padding: 0 .5rem .5rem;
+    }
+
+    #user-list li {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .4rem .6rem;
+      border-radius: 6px;
+      font-size: .9rem;
+      transition: background .15s;
+    }
+    #user-list li:hover { background: var(--border); }
+
+    #user-list li .avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .8rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      color: #fff;
+    }
+
+    /* Messages */
+    #messages-wrap {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: .25rem;
+      scroll-behavior: smooth;
+    }
+
+    /* Message bubble */
+    .msg {
+      display: flex;
+      flex-direction: column;
+      max-width: 75%;
+      animation: fadeIn .2s ease;
+    }
+    .msg.own  { align-self: flex-end; }
+    .msg.other{ align-self: flex-start; }
+
+    @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+
+    .msg-meta {
+      font-size: .72rem;
+      color: var(--text-dim);
+      margin-bottom: .15rem;
+      display: flex;
+      gap: .4rem;
+      align-items: baseline;
+    }
+    .msg.own .msg-meta { flex-direction: row-reverse; }
+
+    .msg-name { font-weight: 700; }
+
+    .msg-bubble {
+      padding: .55rem .8rem;
+      border-radius: 14px;
+      line-height: 1.45;
+      font-size: .95rem;
+      word-break: break-word;
+    }
+    .msg.own   .msg-bubble { background: var(--self-bg); border-bottom-right-radius: 4px; }
+    .msg.other .msg-bubble { background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+
+    /* System message */
+    .msg-system {
+      align-self: center;
+      font-size: .78rem;
+      color: var(--text-dim);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: .25rem .9rem;
+      margin: .3rem 0;
+      animation: fadeIn .2s ease;
+    }
+
+    /* Input bar */
+    #input-bar {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: .6rem;
+      padding: .8rem 1rem;
+      flex-shrink: 0;
+    }
+
+    #msg-input {
+      flex: 1;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: .95rem;
+      padding: .6rem 1rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+    #msg-input:focus { border-color: var(--accent); }
+
+    #btn-enviar {
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 0 1.1rem;
+      transition: background .2s, transform .1s;
+    }
+    #btn-enviar:hover  { background: var(--accent-h); }
+    #btn-enviar:active { transform: scale(.95); }
+    #btn-enviar:disabled { background: var(--border); cursor: default; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+    @media (max-width: 540px) {
+      #sidebar { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Login overlay ──────────────────────────────────────────── -->
+<div id="login-overlay">
+  <div id="login-box">
+    <h1>💬 Chat <span>WebSocket</span></h1>
+    <div class="field">
+      <label>Servidor (IP ou hostname)</label>
+      <input type="text" id="inp-host" value="localhost" placeholder="ex: 192.168.1.10" />
+    </div>
+    <div class="field">
+      <label>Porta</label>
+      <input type="number" id="inp-porta" value="8765" min="1" max="65535" />
+    </div>
+    <div class="field">
+      <label>Seu nome</label>
+      <input type="text" id="inp-nome" placeholder="ex: Maria" maxlength="24" />
+    </div>
+    <p id="erro-login"></p>
+    <button id="btn-conectar">Entrar no Chat</button>
+  </div>
+</div>
+
+<!-- ── Chat shell ─────────────────────────────────────────────── -->
+<div id="chat-shell">
+  <div id="header">
+    <div id="header-icon">💬</div>
+    <div>
+      <div id="header-title">Chat WebSocket</div>
+      <div id="header-sub">Lab 31 — Prof. Alessandro Vivas Andrade</div>
+    </div>
+    <div id="status-label">Desconectado</div>
+    <div id="status-dot"></div>
+  </div>
+
+  <div id="body">
+    <aside id="sidebar">
+      <div id="sidebar-title">Online</div>
+      <ul id="user-list"></ul>
+    </aside>
+
+    <div id="messages-wrap"></div>
+  </div>
+
+  <div id="input-bar">
+    <input type="text" id="msg-input" placeholder="Digite uma mensagem…" disabled maxlength="500" />
+    <button id="btn-enviar" disabled>➤</button>
+  </div>
+</div>
+
+<script>
+  // ── Utilitários ─────────────────────────────────────────────────────────────
+  const $ = id => document.getElementById(id);
+
+  // Cores pseudo-aleatórias para avatares
+  const CORES = ['#5865f2','#57f287','#fee75c','#eb459e','#ed4245',
+                 '#3ba55c','#faa61a','#00b0f4','#f47b67','#a37ffe'];
+  const corUsuario = {};
+  function corPara(nome) {
+    if (!corUsuario[nome]) {
+      const idx = Object.keys(corUsuario).length % CORES.length;
+      corUsuario[nome] = CORES[idx];
+    }
+    return corUsuario[nome];
+  }
+
+  // ── Estado global ────────────────────────────────────────────────────────────
+  let ws = null;
+  let meuNome = "";
+
+  // ── Funções de UI ────────────────────────────────────────────────────────────
+  function setStatus(online, label) {
+    $('status-dot').className   = online ? 'online' : '';
+    $('status-label').textContent = label;
+    $('msg-input').disabled     = !online;
+    $('btn-enviar').disabled    = !online;
+  }
+
+  function adicionarMensagem(remetente, texto, hora, propria) {
+    const wrap = $('messages-wrap');
+    const div  = document.createElement('div');
+    div.className = `msg ${propria ? 'own' : 'other'}`;
+    div.innerHTML = `
+      <div class="msg-meta">
+        <span class="msg-name" style="color:${corPara(remetente)}">${escapar(remetente)}</span>
+        <span>${hora}</span>
+      </div>
+      <div class="msg-bubble">${escapar(texto)}</div>`;
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+
+  function adicionarSistema(texto) {
+    const wrap = $('messages-wrap');
+    const div  = document.createElement('div');
+    div.className = 'msg-system';
+    div.textContent = texto;
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+
+  function atualizarUsuarios(lista) {
+    const ul = $('user-list');
+    ul.innerHTML = '';
+    lista.forEach(nome => {
+      const li  = document.createElement('li');
+      const cor = corPara(nome);
+      li.innerHTML = `
+        <div class="avatar" style="background:${cor}">${escapar(nome[0].toUpperCase())}</div>
+        <span>${escapar(nome)}</span>`;
+      ul.appendChild(li);
+    });
+  }
+
+  function escapar(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Conexão WebSocket ────────────────────────────────────────────────────────
+  function conectar(host, porta, nome) {
+    const url = `ws://${host}:${porta}`;
+    $('erro-login').textContent = 'Conectando…';
+
+    try { ws = new WebSocket(url); }
+    catch (e) { mostrarErroLogin('URL inválida: ' + url); return; }
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ tipo: 'entrar', nome }));
+    };
+
+    ws.onmessage = ({ data }) => {
+      const msg = JSON.parse(data);
+
+      if (msg.tipo === 'confirmacao') {
+        // Entrada confirmada: esconder login
+        $('login-overlay').style.display = 'none';
+        setStatus(true, `Conectado como ${meuNome}`);
+        adicionarSistema(msg.texto);
+
+      } else if (msg.tipo === 'erro') {
+        mostrarErroLogin(msg.texto);
+        ws.close();
+
+      } else if (msg.tipo === 'mensagem') {
+        adicionarMensagem(msg.remetente, msg.texto, msg.hora,
+                          msg.remetente === meuNome);
+
+      } else if (msg.tipo === 'sistema') {
+        adicionarSistema(`${msg.hora}  ${msg.texto}`);
+
+      } else if (msg.tipo === 'lista_usuarios') {
+        atualizarUsuarios(msg.usuarios);
+      }
+    };
+
+    ws.onerror = () => mostrarErroLogin('Não foi possível conectar. Verifique o servidor e a porta.');
+
+    ws.onclose = () => {
+      setStatus(false, 'Desconectado');
+      adicionarSistema('Conexão encerrada.');
+    };
+  }
+
+  function mostrarErroLogin(txt) {
+    $('erro-login').textContent = txt;
+    $('btn-conectar').disabled = false;
+  }
+
+  // ── Enviar mensagem ──────────────────────────────────────────────────────────
+  function enviar() {
+    const input = $('msg-input');
+    const texto = input.value.trim();
+    if (!texto || !ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ tipo: 'mensagem', texto }));
+    input.value = '';
+    input.focus();
+  }
+
+  $('btn-enviar').addEventListener('click', enviar);
+  $('msg-input').addEventListener('keydown', e => { if (e.key === 'Enter') enviar(); });
+
+  // ── Login ─────────────────────────────────────────────────────────────────────
+  $('btn-conectar').addEventListener('click', () => {
+    const host  = $('inp-host').value.trim();
+    const porta = $('inp-porta').value.trim();
+    const nome  = $('inp-nome').value.trim();
+
+    if (!host)  { $('erro-login').textContent = 'Informe o endereço do servidor.'; return; }
+    if (!porta) { $('erro-login').textContent = 'Informe a porta.'; return; }
+    if (!nome)  { $('erro-login').textContent = 'Informe seu nome.'; return; }
+
+    meuNome = nome;
+    $('btn-conectar').disabled = true;
+    conectar(host, porta, nome);
+  });
+
+  // Enter no campo nome
+  $('inp-nome').addEventListener('keydown', e => {
+    if (e.key === 'Enter') $('btn-conectar').click();
+  });
+</script>
+</body>
+</html>
