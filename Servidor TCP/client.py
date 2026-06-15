@@ -3,7 +3,11 @@ import socket
 #Criação o socket do cliente
 client_socket = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
 
-client_socket.connect(('127.0.0.1', 8080))
+# Pedir o IP do servidor ao usuário
+server_ip = input("Digite o IP do servidor (padrão: 127.0.0.1): ") or "127.0.0.1"
+porta = input("Digite a porta (padrão: 8080): ") or "8080"
+
+client_socket.connect((server_ip, int(porta)))
 try:
     #Envio de mensagem para o servidor
     client_message = "Hi, server!"

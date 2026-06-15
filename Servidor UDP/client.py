@@ -3,8 +3,12 @@ import socket
 #Socket UDP
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+# Pedir o IP do servidor ao usuário
+server_ip = input("Digite o IP do servidor (padrão: 127.0.0.1): ") or "127.0.0.1"
+porta = input("Digite a porta (padrão: 8080): ") or "8080"
+
 #server address
-server_address = ('127.0.0.1', 8080)
+server_address = (server_ip, int(porta))
 
 #sent message to server
 message = "Hello, UDP Server!"

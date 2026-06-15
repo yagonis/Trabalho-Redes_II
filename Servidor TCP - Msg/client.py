@@ -3,9 +3,18 @@ import threading
 import sys
 
 class ClienteChat:
-    def __init__(self, host='127.0.0.1', porta=8080):
-        self.host = host
-        self.porta = porta
+    def __init__(self, host=None, porta=None):
+        # Se não fornecido, pedir ao usuário
+        if host is None:
+            self.host = input("Digite o IP do servidor (padrão: 127.0.0.1): ") or "127.0.0.1"
+        else:
+            self.host = host
+        
+        if porta is None:
+            porta_input = input("Digite a porta (padrão: 8080): ") or "8080"
+            self.porta = int(porta_input)
+        else:
+            self.porta = porta
         self.socket = None
         self.conectado = False
     
