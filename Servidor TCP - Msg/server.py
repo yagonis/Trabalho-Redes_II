@@ -36,6 +36,10 @@ def handle_cliente(cliente_socket, endereco, numero_cliente):
         with lock:
             clientes[:] = [(c, n) for c, n in clientes if c != cliente_socket]
         
+        try:
+            cliente_socket.shutdown(socket.SHUT_RDWR)
+        except:
+            pass
         cliente_socket.close()
         print(f"[Cliente {numero_cliente}] Desconectado")
         

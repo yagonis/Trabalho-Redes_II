@@ -57,13 +57,18 @@ class ClienteChat:
                 if mensagem.lower() == "sair":
                     print("Encerrando chat...")
                     self.conectado = False
+                    try:
+                        self.socket.shutdown(socket.SHUT_RDWR)
+                    except:
+                        pass
                     self.socket.close()
                     break
                 
                 if mensagem:
                     self.socket.sendall(mensagem.encode('utf-8'))
             
-            except:
+            except Exception as e:
+                print(f"\n❌ Erro ao enviar: {e}")
                 break
         
         self.conectado = False
@@ -73,21 +78,30 @@ class ClienteChat:
         if not self.conectar():
             return
         
-        # Thread para receber mensagens
-        thread_receber = threading.Thread(target=self.receber_mensagens)
-        thread_receber.daemon = True
-        thread_receber.start()
-        
-        # Thread para enviar mensagens
-        thread_enviar = threading.Thread(target=self.enviar_mensagens)
-        thread_enviar.daemon = True
-        thread_enviar.start()
-        
-        # Esperar as threads terminarem
-        thread_receber.join()
-        thread_enviar.join()
-        
-        print("Desconectado do servidor.")
+        try:
+            # Thread para receber mensagens
+            thread_receber = threading.Thread(target=self.receber_mensagens)
+            thread_receber.daemon = True
+            thread_receber.start()
+            
+            # Thread para enviar mensagens
+            thread_enviar = threading.Thread(target=self.enviar_mensagens)
+            thread_enviar.daemon = True
+            thread_enviar.start()
+            
+            # Esperar as threads terminarem
+            thread_receber.join()
+            thread_enviar.join()
+        except KeyboardInterrupt:
+            print("\n✓ Chat interrompido pelo usuário")
+            self.conectado = False
+        finally:
+            try:
+                self.socket.shutdown(socket.SHUT_RDWR)
+            except:
+                pass
+            self.socket.close()
+            print("✓ Desconectado do servidor.")
 
 def main():
     cliente = ClienteChat()
