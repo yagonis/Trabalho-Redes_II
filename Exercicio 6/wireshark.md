@@ -1,4 +1,5 @@
 # Exercício 6 — Captura de Tráfego TCP com Wireshark
+## Alunos - Ian Patrick, Maria Vieira, Miguel Moreira, Yago Brito
 
 ## Visão geral dos pacotes
 

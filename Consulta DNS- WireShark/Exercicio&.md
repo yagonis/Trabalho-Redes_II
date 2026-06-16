@@ -1,4 +1,5 @@
 # Exercício 7 – Análise de Consulta DNS utilizando Wireshark
+## Alunos - Ian Patrick, Maria Vieira, Miguel Moreira, Yago Brito
  
 ## Objetivo
  

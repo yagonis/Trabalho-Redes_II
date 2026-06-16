@@ -1,4 +1,5 @@
 # Exercício 5 – Captura de Tráfego HTTP com Wireshark
+## Alunos - Ian Patrick, Maria Vieira, Miguel Moreira, Yago Brito
 
 ## Imagem 1 – Pacote 26 (Requisição HTTP)
 

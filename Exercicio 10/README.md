@@ -1,4 +1,6 @@
 # Chat WebSocket — Exercício 10
+## Alunos - Ian Patrick, Maria Vieira, Miguel Moreira, Yago Brito
+
 **Laboratório 31 | Prof. Alessandro Vivas Andrade**
 
 ---

@@ -1,4 +1,5 @@
 # Exercício 8 – Análise de Tráfego ICMP com o Comando Ping utilizando Wireshark
+## Alunos - Ian Patrick, Maria Vieira, Miguel Moreira, Yago Brito
 
 ## Objetivo
 

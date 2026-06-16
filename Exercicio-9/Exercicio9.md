@@ -1,4 +1,5 @@
 # Exercício 9 – Análise de Tráfego DHCP utilizando Wireshark
+## Alunos - Ian Patrick, Maria Vieira, Miguel Moreira, Yago Brito
 
 ## Objetivo
 
