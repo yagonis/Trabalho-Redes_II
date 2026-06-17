@@ -1,13 +1,19 @@
 import socket
 
-HOST = "127.0.0.1"
-PORT = 7000
-
 def solicitar_hora():
+    host = input("Digite o IP do servidor: ")
+    porta = input("Digite a porta do servidor: ")
+
+    try:
+        porta = int(porta)
+    except ValueError:
+        print("Erro: a porta deve ser um número.")
+        return
+
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as cliente:
         try:
-            cliente.connect((HOST, PORT))
-            print(f"Conectado ao servidor {HOST}:{PORT}")
+            cliente.connect((host, porta))
+            print(f"Conectado ao servidor {host}:{porta}")
 
             # Envia a solicitação
             cliente.sendall("solicitar_hora".encode())
